@@ -4,7 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Code, Zap, Users, BarChart3, Shield } from "lucide-react"
+import { 
+  BookOpen, 
+  Code, 
+  Zap, 
+  Users, 
+  BarChart3, 
+  Shield, 
+  ArrowRight, 
+  CheckCircle,
+  AlertTriangle,
+  TrendingUp,
+  Cpu,
+  HardDrive,
+  Globe
+} from "lucide-react"
 
 export default function DocsPage() {
   return (
@@ -15,9 +29,229 @@ export default function DocsPage() {
             PerfMaster Documentation
           </h1>
           <p className="text-xl text-slate-300 max-w-3xl">
-            Complete guide to using PerfMaster's AI-powered real-time performance analysis platform
+            AI-powered performance monitoring platform that helps developers build faster, more reliable web applications
           </p>
         </div>
+
+        {/* What PerfMaster Does */}
+        <Card className="bg-slate-800/50 border-slate-700 mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <Zap className="h-6 w-6 text-yellow-400" />
+              What PerfMaster Does
+            </CardTitle>
+            <CardDescription className="text-lg">
+              PerfMaster is an intelligent performance monitoring and optimization platform designed specifically for web developers
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-blue-400">🔍 Real-Time Performance Monitoring</h3>
+                <ul className="space-y-2 text-slate-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Continuous monitoring of Core Web Vitals (LCP, FID, CLS, FCP, TTFB)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Live tracking of memory usage, CPU utilization, and bundle sizes</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Real-time performance alerts and notifications</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Historical performance trend analysis</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-purple-400">🤖 AI-Powered Optimization</h3>
+                <ul className="space-y-2 text-slate-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Intelligent code analysis for performance bottlenecks</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Automated optimization suggestions with code examples</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Impact estimation for each optimization</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>One-click code optimization implementation</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-green-400">👥 Team Collaboration</h3>
+                <ul className="space-y-2 text-slate-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Shared performance insights across development teams</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Real-time collaboration on optimization efforts</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Team performance goals and progress tracking</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Role-based access control and permissions</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-orange-400">🚀 Developer Experience</h3>
+                <ul className="space-y-2 text-slate-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Simple SDK integration with minimal setup</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Comprehensive REST API and WebSocket support</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Interactive dashboards with detailed analytics</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span>Custom metrics and alerting configurations</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* How It Works */}
+        <Card className="bg-slate-800/50 border-slate-700 mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <ArrowRight className="h-6 w-6 text-blue-400" />
+              How PerfMaster Works
+            </CardTitle>
+            <CardDescription className="text-lg">
+              Understanding the complete workflow from data collection to optimization
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 bg-blue-500/20 rounded-full">
+                    <span className="text-blue-400 font-bold">1</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-400 mb-2">Data Collection</h3>
+                    <p className="text-slate-300 mb-3">
+                      PerfMaster SDK integrates with your application to collect performance data automatically.
+                    </p>
+                    <div className="bg-slate-900/50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className="h-4 w-4 text-blue-400" />
+                        <span className="text-sm font-medium">Browser Integration</span>
+                      </div>
+                      <ul className="text-sm text-slate-400 space-y-1">
+                        <li>• Core Web Vitals API monitoring</li>
+                        <li>• Navigation timing and resource loading</li>
+                        <li>• User interaction tracking</li>
+                        <li>• Error and exception monitoring</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-full">
+                    <span className="text-purple-400 font-bold">2</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-purple-400 mb-2">Real-Time Processing</h3>
+                    <p className="text-slate-300 mb-3">
+                      Data is processed in real-time using WebSocket connections and background tasks.
+                    </p>
+                    <div className="bg-slate-900/50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-4 w-4 text-purple-400" />
+                        <span className="text-sm font-medium">Live Processing</span>
+                      </div>
+                      <ul className="text-sm text-slate-400 space-y-1">
+                        <li>• WebSocket streaming for live updates</li>
+                        <li>• Celery background task processing</li>
+                        <li>• Redis caching for performance</li>
+                        <li>• Real-time alerting system</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 bg-green-500/20 rounded-full">
+                    <span className="text-green-400 font-bold">3</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-400 mb-2">AI Analysis</h3>
+                    <p className="text-slate-300 mb-3">
+                      Advanced AI models analyze performance data and code patterns.
+                    </p>
+                    <div className="bg-slate-900/50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Cpu className="h-4 w-4 text-green-400" />
+                        <span className="text-sm font-medium">Machine Learning</span>
+                      </div>
+                      <ul className="text-sm text-slate-400 space-y-1">
+                        <li>• Pattern recognition in performance data</li>
+                        <li>• Code analysis for optimization opportunities</li>
+                        <li>• Predictive modeling for future issues</li>
+                        <li>• Automated suggestion generation</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 bg-orange-500/20 rounded-full">
+                    <span className="text-orange-400 font-bold">4</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-orange-400 mb-2">Optimization Delivery</h3>
+                    <p className="text-slate-300 mb-3">
+                      Actionable insights and code optimizations delivered to developers.
+                    </p>
+                    <div className="bg-slate-900/50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <HardDrive className="h-4 w-4 text-orange-400" />
+                        <span className="text-sm font-medium">Developer Tools</span>
+                      </div>
+                      <ul className="text-sm text-slate-400 space-y-1">
+                        <li>• Interactive dashboard with visualizations</li>
+                        <li>• Code examples and implementation guides</li>
+                        <li>• Impact estimation and ROI calculations</li>
+                        <li>• One-click optimization application</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="getting-started" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6 bg-slate-800/50">
