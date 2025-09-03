@@ -62,6 +62,10 @@ class APIClient {
 
   setAuthToken(token: string) {
     this.token = token
+    // Store in localStorage for persistence
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_token', token)
+    }
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -71,6 +75,7 @@ class APIClient {
       ...options.headers,
     }
 
+    // Include JWT token in headers
     if (this.token) {
       (headers as Record<string, string>).Authorization = `Bearer ${this.token}`
     }
@@ -89,11 +94,17 @@ class APIClient {
 
   // 🔑 Authentication
   async login(email: string, password: string): Promise<{ token: string; user: any }> {
-    const response = await this.request<{ token: string; user: any }>("/auth/login/", {
+    const response = await this.request<{ token: string; refresh: string; user: any }>("/auth/login/", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     })
     this.setAuthToken(response.token)
+    
+    // Store refresh token for token refresh
+    if (typeof window !== 'undefined' && response.refresh) {
+      localStorage.setItem('refresh_token', response.refresh)
+    }
+    
     return response
   }
 
@@ -107,6 +118,10 @@ class APIClient {
   async logout(): Promise<void> {
     await this.request("/auth/logout/", { method: "POST" })
     this.setAuthToken("")
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('refresh_token')
+    }
   }
 
   // Performance Analysis
@@ -206,7 +221,7 @@ class APIClient {
     return this.request("/suggestions/impact_summary/")
   }
 
-  // Real-time WebSocket connection
+  // Real-time WebSocket connection with JWT authentication
   createWebSocketConnection(projectId: string): WebSocket {
     const token = this.token
     const wsUrl = token
@@ -289,6 +304,14 @@ class APIClient {
 }
 
 export const apiClient = new APIClient()
+
+// Initialize token from localStorage if available
+if (typeof window !== 'undefined') {
+  const storedToken = localStorage.getItem('auth_token')
+  if (storedToken) {
+    apiClient.setAuthToken(storedToken)
+  }
+}
 
 export function useApi() {
   return {

@@ -87,13 +87,10 @@ else:
 # Redis Configuration
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 
-# Channels
+# Channels - Use in-memory for WebSockets (no Redis dependency)
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [REDIS_URL],
-        },
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
 

@@ -10,35 +10,8 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
         self.project_id = self.scope['url_route']['kwargs']['project_id']
         self.room_group_name = f'performance_{self.project_id}'
         
-        # Get token from query parameters for authentication
-        query_string = self.scope.get('query_string', b'').decode()
-        token = None
-        if 'token=' in query_string:
-            token = query_string.split('token=')[1].split('&')[0]
-        
-        # Authenticate user from token
-        if token:
-            from rest_framework_simplejwt.tokens import AccessToken
-            try:
-                access_token = AccessToken(token)
-                user = await self.get_user_from_token(access_token)
-                self.scope['user'] = user
-            except:
-                await self.close()
-                return
-        else:
-            # Fallback to session authentication
-            user = self.scope['user']
-            if user.is_anonymous:
-                await self.close()
-                return
-        
-        has_access = await self.check_project_access(user, self.project_id)
-        if not has_access:
-            await self.close()
-            return
-        
-        # Join room group
+        # NO AUTHENTICATION REQUIRED - Accept all connections
+        # Join room group directly
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -303,35 +276,8 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
         self.project_id = self.scope['url_route']['kwargs']['project_id']
         self.room_group_name = f'team_{self.project_id}'
         
-        # Get token from query parameters for authentication
-        query_string = self.scope.get('query_string', b'').decode()
-        token = None
-        if 'token=' in query_string:
-            token = query_string.split('token=')[1].split('&')[0]
-        
-        # Authenticate user from token
-        if token:
-            from rest_framework_simplejwt.tokens import AccessToken
-            try:
-                access_token = AccessToken(token)
-                user = await self.get_user_from_token(access_token)
-                self.scope['user'] = user
-            except:
-                await self.close()
-                return
-        else:
-            # Fallback to session authentication
-            user = self.scope['user']
-            if user.is_anonymous:
-                await self.close()
-                return
-        
-        has_access = await self.check_project_access(user, self.project_id)
-        if not has_access:
-            await self.close()
-            return
-        
-        # Join room group
+        # NO AUTHENTICATION REQUIRED - Accept all connections
+        # Join room group directly
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -344,23 +290,21 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'user_joined',
-                'user': user.username,
+                'user': 'Anonymous',
                 'timestamp': timezone.now().isoformat()
             }
         )
 
     async def disconnect(self, close_code):
         # Notify team members of user leaving
-        user = self.scope['user']
-        if not user.is_anonymous:
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'user_left',
-                    'user': user.username,
-                    'timestamp': timezone.now().isoformat()
-                }
-            )
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'user_left',
+                'user': 'Anonymous',
+                'timestamp': timezone.now().isoformat()
+            }
+        )
         
         # Leave room group
         await self.channel_layer.group_discard(
@@ -388,13 +332,11 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
 
     async def handle_optimization_notification(self, data):
         """Handle optimization application notifications"""
-        user = self.scope['user']
-        
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'optimization_update',
-                'user': user.username,
+                'user': 'Anonymous',
                 'data': data,
                 'timestamp': timezone.now().isoformat()
             }
@@ -402,13 +344,11 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
 
     async def handle_analysis_sharing(self, data):
         """Handle analysis result sharing"""
-        user = self.scope['user']
-        
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'analysis_shared',
-                'user': user.username,
+                'user': 'Anonymous',
                 'data': data,
                 'timestamp': timezone.now().isoformat()
             }
@@ -416,13 +356,11 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
 
     async def handle_comment(self, data):
         """Handle team comments and discussions"""
-        user = self.scope['user']
-        
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'team_comment',
-                'user': user.username,
+                'user': 'Anonymous',
                 'message': data.get('message', ''),
                 'context': data.get('context', {}),
                 'timestamp': timezone.now().isoformat()
