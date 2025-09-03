@@ -10,11 +10,28 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
         self.project_id = self.scope['url_route']['kwargs']['project_id']
         self.room_group_name = f'performance_{self.project_id}'
         
-        # Check if user has access to this project
-        user = self.scope['user']
-        if user.is_anonymous:
-            await self.close()
-            return
+        # Get token from query parameters for authentication
+        query_string = self.scope.get('query_string', b'').decode()
+        token = None
+        if 'token=' in query_string:
+            token = query_string.split('token=')[1].split('&')[0]
+        
+        # Authenticate user from token
+        if token:
+            from rest_framework_simplejwt.tokens import AccessToken
+            try:
+                access_token = AccessToken(token)
+                user = await self.get_user_from_token(access_token)
+                self.scope['user'] = user
+            except:
+                await self.close()
+                return
+        else:
+            # Fallback to session authentication
+            user = self.scope['user']
+            if user.is_anonymous:
+                await self.close()
+                return
         
         has_access = await self.check_project_access(user, self.project_id)
         if not has_access:
@@ -240,7 +257,7 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
             # Get component breakdown
             component_metrics = recent_metrics.values('component_path').annotate(
                 avg_render_time=Avg('render_time'),
-                count=models.Count('metric_id')
+                count=Count('metric_id')
             ).order_by('-avg_render_time')[:10]
             
             return {
@@ -271,6 +288,13 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
                 'message': f'Failed to load initial data: {str(e)}'
             }))
 
+    @database_sync_to_async
+    def get_user_from_token(self, access_token):
+        """Get user from JWT token"""
+        from django.contrib.auth.models import User
+        user_id = access_token['user_id']
+        return User.objects.get(id=user_id)
+
 
 class TeamCollaborationConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for team collaboration features"""
@@ -279,11 +303,28 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
         self.project_id = self.scope['url_route']['kwargs']['project_id']
         self.room_group_name = f'team_{self.project_id}'
         
-        # Check authentication and project access
-        user = self.scope['user']
-        if user.is_anonymous:
-            await self.close()
-            return
+        # Get token from query parameters for authentication
+        query_string = self.scope.get('query_string', b'').decode()
+        token = None
+        if 'token=' in query_string:
+            token = query_string.split('token=')[1].split('&')[0]
+        
+        # Authenticate user from token
+        if token:
+            from rest_framework_simplejwt.tokens import AccessToken
+            try:
+                access_token = AccessToken(token)
+                user = await self.get_user_from_token(access_token)
+                self.scope['user'] = user
+            except:
+                await self.close()
+                return
+        else:
+            # Fallback to session authentication
+            user = self.scope['user']
+            if user.is_anonymous:
+                await self.close()
+                return
         
         has_access = await self.check_project_access(user, self.project_id)
         if not has_access:
@@ -436,3 +477,10 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
             return project.created_by == user or user in project.team_members.all()
         except Project.DoesNotExist:
             return False
+
+    @database_sync_to_async
+    def get_user_from_token(self, access_token):
+        """Get user from JWT token"""
+        from django.contrib.auth.models import User
+        user_id = access_token['user_id']
+        return User.objects.get(id=user_id)

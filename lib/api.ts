@@ -87,6 +87,28 @@ class APIClient {
     return response.json()
   }
 
+  // 🔑 Authentication
+  async login(email: string, password: string): Promise<{ token: string; user: any }> {
+    const response = await this.request<{ token: string; user: any }>("/auth/login/", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    })
+    this.setAuthToken(response.token)
+    return response
+  }
+
+  async register(name: string, email: string, password: string): Promise<any> {
+    return this.request("/auth/register/", {
+      method: "POST",
+      body: JSON.stringify({ name, email, password }),
+    })
+  }
+
+  async logout(): Promise<void> {
+    await this.request("/auth/logout/", { method: "POST" })
+    this.setAuthToken("")
+  }
+
   // Performance Analysis
   async analyzePerformance(metrics: PerformanceMetrics): Promise<{
     performance_score: number
@@ -186,7 +208,10 @@ class APIClient {
 
   // Real-time WebSocket connection
   createWebSocketConnection(projectId: string): WebSocket {
-    const wsUrl = `ws://localhost:8000/ws/performance/${projectId}/`
+    const token = this.token
+    const wsUrl = token
+      ? `ws://localhost:8000/ws/performance/${projectId}/?token=${token}`
+      : `ws://localhost:8000/ws/performance/${projectId}/`
     return new WebSocket(wsUrl)
   }
 
@@ -267,27 +292,10 @@ export const apiClient = new APIClient()
 
 export function useApi() {
   return {
-    // Authentication
-    login: async (email: string, password: string) => {
-      const response = await apiClient.request<{ token: string; user: any }>("/auth/login/", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      })
-      apiClient.setAuthToken(response.token)
-      return response
-    },
-
-    register: async (name: string, email: string, password: string) => {
-      return apiClient.request("/auth/register/", {
-        method: "POST",
-        body: JSON.stringify({ name, email, password }),
-      })
-    },
-
-    logout: async () => {
-      await apiClient.request("/auth/logout/", { method: "POST" })
-      apiClient.setAuthToken("")
-    },
+    // ✅ Authentication (fixed)
+    login: apiClient.login.bind(apiClient),
+    register: apiClient.register.bind(apiClient),
+    logout: apiClient.logout.bind(apiClient),
 
     // Performance Analysis
     analyzePerformance: apiClient.analyzePerformance.bind(apiClient),
