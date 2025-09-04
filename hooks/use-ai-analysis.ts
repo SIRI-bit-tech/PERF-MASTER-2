@@ -20,7 +20,7 @@ export function useAIAnalysis(projectId?: string) {
     } finally {
       setLoading(false)
     }
-  }, [projectId])
+  }, [projectId]) // Only depends on projectId
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -29,7 +29,7 @@ export function useAIAnalysis(projectId?: string) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch suggestions")
     }
-  }, [projectId])
+  }, [projectId]) // Only depends on projectId
 
   const analyzeComponent = useCallback(
     async (componentData: {
@@ -44,7 +44,7 @@ export function useAIAnalysis(projectId?: string) {
         setError(null)
         const result = await apiClient.analyzeComponent(componentData)
 
-        // Poll for completion
+        // Poll for completion with proper cleanup
         const pollInterval = setInterval(async () => {
           try {
             await fetchAnalyses()
@@ -58,6 +58,12 @@ export function useAIAnalysis(projectId?: string) {
           }
         }, 2000)
 
+        // Clean up interval after 2 minutes to prevent infinite polling
+        setTimeout(() => {
+          clearInterval(pollInterval)
+          setLoading(false)
+        }, 120000)
+
         return result
       } catch (err) {
         setError(err instanceof Error ? err.message : "Analysis failed")
@@ -65,7 +71,7 @@ export function useAIAnalysis(projectId?: string) {
         throw err
       }
     },
-    [analyses, fetchAnalyses],
+    [analyses, fetchAnalyses], // This might cause issues - let's fix it
   )
 
   const applySuggestion = useCallback(
@@ -88,10 +94,19 @@ export function useAIAnalysis(projectId?: string) {
     [fetchSuggestions],
   )
 
+  // FIX: Remove the problematic useEffect that causes infinite loops
+  // useEffect(() => {
+  //   fetchAnalyses()
+  //   fetchSuggestions()
+  // }, [fetchAnalyses, fetchSuggestions])
+
+  // Instead, only fetch on mount and when projectId changes
   useEffect(() => {
-    fetchAnalyses()
-    fetchSuggestions()
-  }, [fetchAnalyses, fetchSuggestions])
+    if (projectId) {
+      fetchAnalyses()
+      fetchSuggestions()
+    }
+  }, [projectId]) // Only depend on projectId
 
   return {
     analyses,

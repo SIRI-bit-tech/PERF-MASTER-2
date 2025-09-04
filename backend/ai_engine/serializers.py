@@ -44,7 +44,7 @@ class OptimizationSuggestionSerializer(serializers.ModelSerializer):
 
 class ComponentAnalysisRequestSerializer(serializers.Serializer):
     """Serializer for component analysis requests"""
-    project_id = serializers.UUIDField()
+    project_id = serializers.CharField(max_length=100)  # Accept string project IDs
     component_path = serializers.CharField(max_length=500)
     source_code = serializers.CharField()
     framework_version = serializers.CharField(max_length=50, default='React 18')

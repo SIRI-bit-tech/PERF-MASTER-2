@@ -78,18 +78,18 @@ export function PerformanceDashboard() {
     if (!isAnalyzing) {
       try {
         await analyzeComponent({
-          project_id: "project-123",
+          project_id: "project-123",  // This now works with CharField
           component_path: "/components/Dashboard",
           source_code: `
             import React, { useState, useEffect } from 'react';
-            
+
             export function Dashboard() {
               const [data, setData] = useState([]);
-              
+
               useEffect(() => {
                 fetchData().then(setData);
               }, []);
-              
+
               return (
                 <div>
                   {data.map(item => <div key={item.id}>{item.name}</div>)}
@@ -370,7 +370,12 @@ export function PerformanceDashboard() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded">
                   <span className="text-[#b4b9c1]">Total Optimizations Applied</span>
-                  <Badge className="bg-green-600">{suggestions.filter((s) => s.status === "applied").length}</Badge>
+                  <Badge className="bg-green-600">
+                    {Array.isArray(suggestions) 
+                      ? suggestions.filter((s) => s.status === "applied").length 
+                      : 0
+                    }
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded">
                   <span className="text-[#b4b9c1]">Performance Score Improvement</span>
