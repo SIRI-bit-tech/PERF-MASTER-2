@@ -5,7 +5,7 @@ import uuid
 
 
 class Project(models.Model):
-    project_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project_id = models.CharField(max_length=100, primary_key=True, unique=True)  # Changed from UUIDField
     name = models.CharField(max_length=255)
     repository_url = models.URLField(blank=True, null=True)
     framework_version = models.CharField(max_length=50, default='React 18')
@@ -16,12 +16,23 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    branch = models.CharField(max_length=100, default='main')  # Added missing field
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['created_by', 'is_active']),
+            models.Index(fields=['created_at']),
+        ]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.project_id})"
+
+    def save(self, *args, **kwargs):
+        # Auto-generate name if not provided
+        if not self.name and self.project_id:
+            self.name = f"Project {self.project_id}"
+        super().save(*args, **kwargs)
 
 
 class PerformanceMetrics(models.Model):

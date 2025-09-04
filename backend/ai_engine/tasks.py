@@ -6,6 +6,10 @@ import uuid
 from perfmaster.models import (
     AIAnalysisResults, OptimizationSuggestions, Project, ComponentAnalysis
 )
+from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
+
+User = get_user_model()
 
 
 @shared_task(bind=True)
@@ -16,8 +20,37 @@ def analyze_component_performance(self, project_id, component_path, source_code,
     start_time = time.time()
     
     try:
-        # Get project
-        project = Project.objects.get(project_id=project_id)
+        # Get or create a system user for projects
+        user, user_created = User.objects.get_or_create(
+            username='system',
+            defaults={
+                'email': 'system@perfmaster.local',
+                'password': make_password('system123'),  # Hash the password
+                'is_active': True,
+                'is_staff': False,
+                'is_superuser': False
+            }
+        )
+        
+        if user_created:
+            print(f"Created system user: {user.username}")
+        
+        # Get or create project
+        project, created = Project.objects.get_or_create(
+            project_id=project_id,
+            defaults={
+                'name': f'Project {project_id}',
+                'framework_version': framework_version,
+                'repository_url': '',
+                'branch': 'main',
+                'performance_config': {},
+                'ai_settings': {},
+                'created_by': user  # Use the system user
+            }
+        )
+        
+        if created:
+            print(f"Created new project: {project_id}")
         
         # Create analysis record
         analysis = AIAnalysisResults.objects.create(
@@ -28,9 +61,13 @@ def analyze_component_performance(self, project_id, component_path, source_code,
             confidence_score=0.0
         )
         
+        print(f"Created analysis record: {analysis.analysis_id}")
+        
         # Simulate AI analysis (replace with actual AI integration)
         bottlenecks = analyze_code_bottlenecks(source_code, framework_version)
         suggestions = generate_optimization_suggestions(source_code, bottlenecks, framework_version)
+        
+        print(f"Found {len(bottlenecks)} bottlenecks and {len(suggestions)} suggestions")
         
         # Calculate confidence score based on analysis results
         confidence_score = calculate_confidence_score(bottlenecks, suggestions)
@@ -42,6 +79,8 @@ def analyze_component_performance(self, project_id, component_path, source_code,
         analysis.status = 'completed'
         analysis.processing_time = time.time() - start_time
         analysis.save()
+        
+        print(f"Analysis completed: {analysis.analysis_id}")
         
         # Create optimization suggestions
         for suggestion_data in suggestions:
@@ -66,6 +105,8 @@ def analyze_component_performance(self, project_id, component_path, source_code,
             }
         )
         
+        print(f"Component analysis updated for {component_path}")
+        
         return {
             'analysis_id': str(analysis.analysis_id),
             'status': 'completed',
@@ -76,6 +117,7 @@ def analyze_component_performance(self, project_id, component_path, source_code,
         }
         
     except Exception as e:
+        print(f"Analysis failed: {str(e)}")
         # Update analysis status to failed
         if 'analysis' in locals():
             analysis.status = 'failed'

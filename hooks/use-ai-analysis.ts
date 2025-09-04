@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { apiClient, type AIAnalysisResult, type OptimizationSuggestion } from "@/lib/api"
 
 export function useAIAnalysis(projectId?: string) {
@@ -8,29 +8,57 @@ export function useAIAnalysis(projectId?: string) {
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Use refs to prevent infinite loops
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isPollingRef = useRef(false)
+  const hasInitializedRef = useRef(false)
 
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    isPollingRef.current = false
+  }, [])
+
+  // Fetch analyses - only depends on projectId
   const fetchAnalyses = useCallback(async () => {
+    if (!projectId) return
+    
     try {
       setLoading(true)
       setError(null)
       const data = await apiClient.getAIAnalyses(projectId)
-      setAnalyses(data)
+      setAnalyses(Array.isArray(data) ? data : [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch analyses")
+      setAnalyses([])
     } finally {
       setLoading(false)
     }
-  }, [projectId]) // Only depends on projectId
+  }, [projectId])
 
+  // Fetch suggestions - only depends on projectId
   const fetchSuggestions = useCallback(async () => {
+    if (!projectId) return
+    
     try {
       const data = await apiClient.getOptimizationSuggestions(projectId)
-      setSuggestions(data)
+      setSuggestions(Array.isArray(data) ? data : [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch suggestions")
+      setSuggestions([])
     }
-  }, [projectId]) // Only depends on projectId
+  }, [projectId])
 
+  // Analyze component with proper polling
   const analyzeComponent = useCallback(
     async (componentData: {
       project_id: string
@@ -43,27 +71,37 @@ export function useAIAnalysis(projectId?: string) {
         setLoading(true)
         setError(null)
         const result = await apiClient.analyzeComponent(componentData)
-
-        // Poll for completion with proper cleanup
+  
+        // Simple polling - check every 3 seconds for 30 seconds max
+        let attempts = 0
+        const maxAttempts = 10
+        
         const pollInterval = setInterval(async () => {
+          attempts++
+          
+          if (attempts >= maxAttempts) {
+            clearInterval(pollInterval)
+            setLoading(false)
+            return
+          }
+  
           try {
-            await fetchAnalyses()
-            const latestAnalysis = analyses.find((a) => a.status === "completed")
-            if (latestAnalysis) {
-              clearInterval(pollInterval)
-              setLoading(false)
+            const analyses = await apiClient.getAIAnalyses(projectId)
+            if (Array.isArray(analyses) && analyses.length > 0) {
+              const completed = analyses.find(a => a.status === "completed")
+              if (completed) {
+                setAnalyses(analyses)
+                clearInterval(pollInterval)
+                setLoading(false)
+                return
+              }
             }
+            setAnalyses(Array.isArray(analyses) ? analyses : [])
           } catch (err) {
             console.error("Polling error:", err)
           }
-        }, 2000)
-
-        // Clean up interval after 2 minutes to prevent infinite polling
-        setTimeout(() => {
-          clearInterval(pollInterval)
-          setLoading(false)
-        }, 120000)
-
+        }, 3000)
+  
         return result
       } catch (err) {
         setError(err instanceof Error ? err.message : "Analysis failed")
@@ -71,9 +109,10 @@ export function useAIAnalysis(projectId?: string) {
         throw err
       }
     },
-    [analyses, fetchAnalyses], // This might cause issues - let's fix it
+    [projectId], // Simpler dependencies
   )
 
+  // Apply suggestion
   const applySuggestion = useCallback(
     async (
       suggestionId: string,
@@ -84,7 +123,7 @@ export function useAIAnalysis(projectId?: string) {
     ) => {
       try {
         const result = await apiClient.applySuggestion(suggestionId, options)
-        await fetchSuggestions() // Refresh suggestions
+        await fetchSuggestions()
         return result
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to apply suggestion")
@@ -94,19 +133,23 @@ export function useAIAnalysis(projectId?: string) {
     [fetchSuggestions],
   )
 
-  // FIX: Remove the problematic useEffect that causes infinite loops
-  // useEffect(() => {
-  //   fetchAnalyses()
-  //   fetchSuggestions()
-  // }, [fetchAnalyses, fetchSuggestions])
-
-  // Instead, only fetch on mount and when projectId changes
+  // Initialize data only once
   useEffect(() => {
-    if (projectId) {
+    if (projectId && !hasInitializedRef.current) {
+      hasInitializedRef.current = true
+      console.log("Initializing data for project:", projectId)
       fetchAnalyses()
       fetchSuggestions()
     }
-  }, [projectId]) // Only depend on projectId
+  }, [projectId, fetchAnalyses, fetchSuggestions])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      console.log("Cleaning up useAIAnalysis")
+      cleanup()
+    }
+  }, [cleanup])
 
   return {
     analyses,
