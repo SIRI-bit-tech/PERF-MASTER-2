@@ -67,21 +67,23 @@ WSGI_APPLICATION = 'perfmaster.wsgi.application'
 ASGI_APPLICATION = 'perfmaster.asgi.application'
 
 # Database Configuration
-# Use SQLite for development, DATABASE_URL for production
-if DEBUG:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
+# Use PostgreSQL if DATABASE_URL is available, otherwise SQLite for local development
+if os.getenv('DATABASE_URL'):
+    # Use PostgreSQL from DATABASE_URL (Render, Heroku, etc.)
     DATABASES = {
         'default': dj_database_url.config(
             default='sqlite:///db.sqlite3',
             conn_max_age=600,
             conn_health_checks=True,
         )
+    }
+else:
+    # Use SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 
 # Redis Configuration
@@ -138,13 +140,41 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# CORS settings - Updated to use environment variables
+CORS_ALLOWED_ORIGINS = []
+CORS_ALLOWED_ORIGIN_REGEXES = []
+
+# Get CORS origins from environment variable
+cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
+if cors_origins:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+
+
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Additional CORS settings you might want to configure via environment variables
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# You can also make these configurable via environment variables
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 # AI Configuration
 HUGGINGFACE_API_TOKEN = os.getenv('HUGGINGFACE_API_TOKEN')
