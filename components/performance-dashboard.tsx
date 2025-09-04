@@ -12,15 +12,12 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle,
-  Settings,
   Play,
   Pause,
   BarChart3,
   Code,
   Database,
   Cpu,
-  Users,
-  Bell,
   RefreshCw,
 } from "lucide-react"
 import { RealTimeCharts } from "./real-time-charts"
@@ -140,14 +137,6 @@ export function PerformanceDashboard() {
             <option>Blog Platform</option>
           </select>
 
-          <Button variant="outline" size="icon">
-            <Bell className="w-4 h-4" />
-          </Button>
-
-          <Button variant="outline" size="icon">
-            <Users className="w-4 h-4" />
-          </Button>
-
           <Button
             onClick={handleStartAnalysis}
             disabled={loading}
@@ -155,10 +144,6 @@ export function PerformanceDashboard() {
           >
             {isAnalyzing ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
             {isAnalyzing ? "Stop Analysis" : "Start Analysis"}
-          </Button>
-
-          <Button variant="outline" size="icon">
-            <Settings className="w-4 h-4" />
           </Button>
         </div>
       </motion.header>
