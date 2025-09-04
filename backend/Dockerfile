@@ -16,20 +16,14 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project
-COPY backend/ .
+COPY . .
 
 # Create logs directory
 RUN mkdir -p logs
-
-# Run migrations
-RUN python manage.py migrate --noinput
-
-# Collect static files
-RUN python manage.py collectstatic --noinput
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
@@ -37,7 +31,13 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose port
-EXPOSE 8000
+EXPOSE $PORT
 
-# Run both Django and Celery
-CMD ["sh", "-c", "celery -A perfmaster worker --pool=solo --loglevel=info & gunicorn --bind 0.0.0.0:8000 --workers 3 perfmaster.wsgi:application"]
+# Create startup script
+COPY start.sh .
+USER root
+RUN chmod +x start.sh
+USER appuser
+
+# Run startup script
+CMD ["./start.sh"]
