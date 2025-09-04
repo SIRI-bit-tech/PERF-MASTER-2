@@ -13,24 +13,18 @@ from .tasks import analyze_component_performance, apply_optimization_suggestions
 
 class AIAnalysisViewSet(viewsets.ModelViewSet):
     serializer_class = AIAnalysisResultsSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]  # Anyone can use AI analysis
 
     def get_queryset(self):
-        user = self.request.user
-        project_ids = Project.objects.filter(
-            Q(created_by=user) | Q(team_members=user)
-        ).values_list('project_id', flat=True)
-        
-        return AIAnalysisResults.objects.filter(
-            project_id__in=project_ids
-        ).select_related('project').prefetch_related('suggestions')
+        # Return all analyses (no user filtering for public access)
+        return AIAnalysisResults.objects.all().select_related('project').prefetch_related('suggestions')
 
     @action(detail=False, methods=['post'])
     def analyze_component(self, request):
         """Trigger AI analysis for a specific component"""
         serializer = ComponentAnalysisRequestSerializer(
-            data=request.data,
-            context={'request': request}
+            data=request.data
+            # No context needed since we removed user validation
         )
         serializer.is_valid(raise_exception=True)
         
@@ -103,17 +97,11 @@ class AIAnalysisViewSet(viewsets.ModelViewSet):
 
 class OptimizationSuggestionViewSet(viewsets.ModelViewSet):
     serializer_class = OptimizationSuggestionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]  # Anyone can use suggestions
 
     def get_queryset(self):
-        user = self.request.user
-        project_ids = Project.objects.filter(
-            Q(created_by=user) | Q(team_members=user)
-        ).values_list('project_id', flat=True)
-        
-        return OptimizationSuggestions.objects.filter(
-            analysis__project_id__in=project_ids
-        ).select_related('analysis', 'analysis__project')
+        # Return all suggestions (no user filtering for public access)
+        return OptimizationSuggestions.objects.all().select_related('analysis', 'analysis__project')
 
     @action(detail=False, methods=['get'])
     def pending(self, request):
@@ -146,7 +134,7 @@ class OptimizationSuggestionViewSet(viewsets.ModelViewSet):
             suggestion_ids=[str(sid) for sid in serializer.validated_data['suggestion_ids']],
             auto_apply=serializer.validated_data['auto_apply'],
             create_backup=serializer.validated_data['create_backup'],
-            user_id=request.user.id
+            user_id=None  # No user for anonymous access
         )
         
         return Response({
@@ -175,7 +163,7 @@ class OptimizationSuggestionViewSet(viewsets.ModelViewSet):
             suggestion_ids=[str(suggestion.suggestion_id)],
             auto_apply=request.data.get('auto_apply', False),
             create_backup=request.data.get('create_backup', True),
-            user_id=request.user.id
+            user_id=None  # No user for anonymous access
         )
         
         return Response({

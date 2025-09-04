@@ -53,17 +53,6 @@ class ComponentAnalysisRequestSerializer(serializers.Serializer):
         default='full'
     )
 
-    def validate_project_id(self, value):
-        """Validate that the project exists and user has access"""
-        try:
-            project = Project.objects.get(project_id=value)
-            user = self.context['request'].user
-            if not (project.created_by == user or user in project.team_members.all()):
-                raise serializers.ValidationError("You don't have access to this project")
-            return value
-        except Project.DoesNotExist:
-            raise serializers.ValidationError("Project not found")
-
 
 class OptimizationApplicationSerializer(serializers.Serializer):
     """Serializer for applying optimization suggestions"""
@@ -73,15 +62,3 @@ class OptimizationApplicationSerializer(serializers.Serializer):
     )
     auto_apply = serializers.BooleanField(default=False)
     create_backup = serializers.BooleanField(default=True)
-    
-    def validate_suggestion_ids(self, value):
-        """Validate that all suggestions exist and are applicable"""
-        suggestions = OptimizationSuggestions.objects.filter(
-            suggestion_id__in=value,
-            status='pending'
-        )
-        
-        if len(suggestions) != len(value):
-            raise serializers.ValidationError("Some suggestions are not found or not applicable")
-        
-        return value
