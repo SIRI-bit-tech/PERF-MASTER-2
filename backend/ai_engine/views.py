@@ -17,7 +17,8 @@ class AIAnalysisViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Return all analyses (no user filtering for public access)
-        return AIAnalysisResults.objects.all().select_related('project').prefetch_related('suggestions')
+        # Removed prefetch_related('suggestions') because suggestions is a JSONField, not a related field
+        return AIAnalysisResults.objects.all().select_related('project')
 
     @action(detail=False, methods=['post'])
     def analyze_component(self, request):
@@ -44,54 +45,19 @@ class AIAnalysisViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_202_ACCEPTED)
 
     @action(detail=False, methods=['get'])
-    def recent_analyses(self, request):
-        """Get recent AI analyses with summary statistics"""
-        queryset = self.get_queryset()
-        
-        # Get analyses from last 7 days
-        recent_analyses = queryset.filter(
-            created_at__gte=timezone.now() - timezone.timedelta(days=7)
-        )
-        
-        # Calculate statistics
-        stats = recent_analyses.aggregate(
-            total_analyses=Count('analysis_id'),
-            avg_confidence=Avg('confidence_score'),
-            completed_analyses=Count('analysis_id', filter=Q(status='completed')),
-            pending_analyses=Count('analysis_id', filter=Q(status='pending'))
-        )
-        
-        # Get top bottlenecks
-        bottleneck_components = recent_analyses.filter(
-            status='completed'
-        ).values('component_id').annotate(
-            bottleneck_count=Count('analysis_id')
-        ).order_by('-bottleneck_count')[:5]
+    def statistics(self, request):
+        """Get analysis statistics"""
+        total_analyses = self.get_queryset().count()
+        completed_analyses = self.get_queryset().filter(status='completed').count()
+        avg_confidence = self.get_queryset().filter(status='completed').aggregate(
+            avg_confidence=Avg('confidence_score')
+        )['avg_confidence'] or 0
         
         return Response({
-            'statistics': stats,
-            'recent_analyses': self.get_serializer(recent_analyses[:10], many=True).data,
-            'top_bottlenecks': list(bottleneck_components)
-        })
-
-    @action(detail=True, methods=['post'])
-    def regenerate(self, request, pk=None):
-        """Regenerate analysis with updated parameters"""
-        analysis = self.get_object()
-        
-        # Trigger new analysis task
-        task = analyze_component_performance.delay(
-            project_id=str(analysis.project.project_id),
-            component_path=analysis.component_id,
-            source_code=request.data.get('source_code', ''),
-            framework_version=analysis.project.framework_version,
-            analysis_type=request.data.get('analysis_type', 'full')
-        )
-        
-        return Response({
-            'message': 'Analysis regeneration started',
-            'task_id': task.id,
-            'original_analysis_id': str(analysis.analysis_id)
+            'total_analyses': total_analyses,
+            'completed_analyses': completed_analyses,
+            'completion_rate': (completed_analyses / total_analyses * 100) if total_analyses > 0 else 0,
+            'average_confidence': round(avg_confidence, 2)
         })
 
 
@@ -109,89 +75,117 @@ class OptimizationSuggestionViewSet(viewsets.ModelViewSet):
         pending_suggestions = self.get_queryset().filter(status='pending')
         
         # Group by priority
-        by_priority = {}
-        for suggestion in pending_suggestions:
-            priority = suggestion.priority
-            if priority not in by_priority:
-                by_priority[priority] = []
-            by_priority[priority].append(suggestion)
+        high_priority = pending_suggestions.filter(priority=1)
+        medium_priority = pending_suggestions.filter(priority=2)
+        low_priority = pending_suggestions.filter(priority__gte=3)
         
-        # Serialize grouped suggestions
-        result = {}
-        for priority, suggestions in by_priority.items():
-            result[f'priority_{priority}'] = self.get_serializer(suggestions, many=True).data
+        return Response({
+            'total_pending': pending_suggestions.count(),
+            'high_priority': self.get_serializer(high_priority, many=True).data,
+            'medium_priority': self.get_serializer(medium_priority, many=True).data,
+            'low_priority': self.get_serializer(low_priority, many=True).data
+        })
+
+    @action(detail=False, methods=['get'])
+    def by_impact(self, request):
+        """Get suggestions grouped by potential impact"""
+        suggestions = self.get_queryset().filter(status='pending')
         
-        return Response(result)
+        # Group by impact estimate
+        high_impact = []
+        medium_impact = []
+        low_impact = []
+        
+        for suggestion in suggestions:
+            impact = suggestion.impact_estimate.get('performance_gain', 0)
+            if impact >= 30:
+                high_impact.append(suggestion)
+            elif impact >= 15:
+                medium_impact.append(suggestion)
+            else:
+                low_impact.append(suggestion)
+        
+        return Response({
+            'high_impact': self.get_serializer(high_impact, many=True).data,
+            'medium_impact': self.get_serializer(medium_impact, many=True).data,
+            'low_impact': self.get_serializer(low_impact, many=True).data
+        })
 
     @action(detail=False, methods=['post'])
-    def apply_suggestions(self, request):
+    def apply_bulk(self, request):
         """Apply multiple optimization suggestions"""
         serializer = OptimizationApplicationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # Trigger async application task
+        suggestion_ids = serializer.validated_data['suggestion_ids']
+        auto_apply = serializer.validated_data.get('auto_apply', False)
+        create_backup = serializer.validated_data.get('create_backup', True)
+        
+        # Trigger bulk application task
         task = apply_optimization_suggestions.delay(
-            suggestion_ids=[str(sid) for sid in serializer.validated_data['suggestion_ids']],
-            auto_apply=serializer.validated_data['auto_apply'],
-            create_backup=serializer.validated_data['create_backup'],
-            user_id=None  # No user for anonymous access
+            suggestion_ids=suggestion_ids,
+            auto_apply=auto_apply,
+            create_backup=create_backup
         )
         
         return Response({
-            'message': 'Optimization application started',
+            'message': f'Bulk application started for {len(suggestion_ids)} suggestions',
             'task_id': task.id,
-            'suggestion_count': len(serializer.validated_data['suggestion_ids'])
+            'auto_apply': auto_apply,
+            'create_backup': create_backup
         }, status=status.HTTP_202_ACCEPTED)
 
     @action(detail=True, methods=['post'])
-    def apply_single(self, request, pk=None):
-        """Apply a single optimization suggestion"""
+    def apply(self, request, pk=None):
+        """Apply a specific optimization suggestion"""
         suggestion = self.get_object()
         
-        if suggestion.status != 'pending':
-            return Response(
-                {'error': 'Suggestion is not in pending status'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        auto_apply = request.data.get('auto_apply', False)
+        create_backup = request.data.get('create_backup', True)
         
-        # Update status to testing
-        suggestion.status = 'testing'
-        suggestion.save()
-        
-        # Trigger async application
+        # Trigger application task
         task = apply_optimization_suggestions.delay(
             suggestion_ids=[str(suggestion.suggestion_id)],
-            auto_apply=request.data.get('auto_apply', False),
-            create_backup=request.data.get('create_backup', True),
-            user_id=None  # No user for anonymous access
+            auto_apply=auto_apply,
+            create_backup=create_backup
         )
         
         return Response({
-            'message': 'Optimization application started',
+            'message': f'Application started for suggestion {suggestion.suggestion_id}',
             'task_id': task.id,
-            'suggestion_id': str(suggestion.suggestion_id)
-        })
+            'auto_apply': auto_apply,
+            'create_backup': create_backup
+        }, status=status.HTTP_202_ACCEPTED)
 
     @action(detail=False, methods=['get'])
-    def impact_summary(self, request):
-        """Get summary of optimization impact across projects"""
-        queryset = self.get_queryset().filter(status='applied')
+    def summary(self, request):
+        """Get optimization suggestions summary"""
+        total_suggestions = self.get_queryset().count()
+        applied_suggestions = self.get_queryset().filter(status='applied').count()
+        pending_suggestions = self.get_queryset().filter(status='pending').count()
+        rejected_suggestions = self.get_queryset().filter(status='rejected').count()
         
-        # Calculate total impact
+        # Calculate impact estimates
+        suggestions = self.get_queryset().filter(status='applied')
         total_impact = {
-            'performance_improvements': 0,
-            'bundle_size_reductions': 0,
-            'memory_optimizations': 0,
-            'suggestions_applied': queryset.count()
+            'performance_gain': 0,
+            'implementation_effort': 0,
+            'cost_savings': 0,
+            'memory_optimizations': 0
         }
         
-        for suggestion in queryset:
+        for suggestion in suggestions:
             impact = suggestion.impact_estimate
-            if 'performance_gain' in impact:
-                total_impact['performance_improvements'] += impact['performance_gain']
-            if 'bundle_reduction' in impact:
-                total_impact['bundle_size_reductions'] += impact['bundle_reduction']
-            if 'memory_optimization' in impact:
-                total_impact['memory_optimizations'] += impact['memory_optimization']
+            total_impact['performance_gain'] += impact.get('performance_gain', 0)
+            total_impact['implementation_effort'] += impact.get('implementation_effort', 0)
+            total_impact['cost_savings'] += impact.get('cost_savings', 0)
+            total_impact['memory_optimizations'] += impact.get('memory_optimization', 0)
         
-        return Response(total_impact)
+        return Response({
+            'total_suggestions': total_suggestions,
+            'applied_suggestions': applied_suggestions,
+            'pending_suggestions': pending_suggestions,
+            'rejected_suggestions': rejected_suggestions,
+            'application_rate': (applied_suggestions / total_suggestions * 100) if total_suggestions > 0 else 0,
+            'total_impact': total_impact
+        })

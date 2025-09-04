@@ -16,7 +16,10 @@ class AIAnalysisResultsSerializer(serializers.ModelSerializer):
         read_only_fields = ['analysis_id', 'created_at', 'processing_time']
 
     def get_suggestions_count(self, obj):
-        return obj.suggestions.count()
+        # obj.suggestions is a JSONField (list), so use len() instead of count()
+        if isinstance(obj.suggestions, list):
+            return len(obj.suggestions)
+        return 0
 
 
 class OptimizationSuggestionSerializer(serializers.ModelSerializer):
@@ -28,18 +31,17 @@ class OptimizationSuggestionSerializer(serializers.ModelSerializer):
         fields = [
             'suggestion_id', 'analysis', 'analysis_project', 'type',
             'description', 'code_changes', 'impact_estimate', 'status',
-            'priority', 'confidence_score', 'created_at', 'applied_at'
+            'priority', 'created_at', 'applied_at'
         ]
-        read_only_fields = ['suggestion_id', 'created_at']
+        read_only_fields = ['suggestion_id', 'created_at', 'applied_at']
 
-    def validate_impact_estimate(self, value):
-        """Validate impact estimate structure"""
-        required_fields = ['performance_gain', 'implementation_effort']
-        if not all(field in value for field in required_fields):
-            raise serializers.ValidationError(
-                f"Impact estimate must include: {', '.join(required_fields)}"
-            )
-        return value
+    def create(self, validated_data):
+        # Set default values for required fields
+        if 'priority' not in validated_data:
+            validated_data['priority'] = 3
+        if 'status' not in validated_data:
+            validated_data['status'] = 'pending'
+        return super().create(validated_data)
 
 
 class ComponentAnalysisRequestSerializer(serializers.Serializer):
