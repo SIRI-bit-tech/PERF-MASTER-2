@@ -1,5 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
-
+// Add WebSocket base URL
+const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"
 export interface PerformanceMetrics {
   lcp: number
   fid: number
@@ -225,8 +226,8 @@ class APIClient {
   createWebSocketConnection(projectId: string): WebSocket {
     const token = this.token
     const wsUrl = token
-      ? `ws://localhost:8000/ws/performance/${projectId}/?token=${token}`
-      : `ws://localhost:8000/ws/performance/${projectId}/`
+      ? `${WS_BASE_URL}/ws/performance/${projectId}/?token=${token}`
+      : `${WS_BASE_URL}/ws/performance/${projectId}/`
     return new WebSocket(wsUrl)
   }
 

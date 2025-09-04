@@ -25,6 +25,9 @@ COPY backend/ .
 # Create logs directory
 RUN mkdir -p logs
 
+# Run migrations
+RUN python manage.py migrate --noinput
+
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
@@ -36,5 +39,5 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "perfmaster.wsgi:application"]
+# Run both Django and Celery
+CMD ["sh", "-c", "celery -A perfmaster worker --pool=solo --loglevel=info & gunicorn --bind 0.0.0.0:8000 --workers 3 perfmaster.wsgi:application"]

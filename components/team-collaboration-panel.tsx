@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Users, MessageCircle, Share2, CheckCircle, User } from "lucide-react"
 
+const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"
+
+
 interface TeamCollaborationPanelProps {
   projectId: string
 }
@@ -33,11 +36,11 @@ export function TeamCollaborationPanel({ projectId }: TeamCollaborationPanelProp
   const [ws, setWs] = useState<WebSocket | null>(null)
 
   useEffect(() => {
-    const websocket = new WebSocket(`ws://localhost:8000/ws/team/${projectId}/`)
+    const websocket = new WebSocket(`${WS_BASE_URL}/ws/team/${projectId}/`)
 
     websocket.onopen = () => {
       setConnected(true)
-      console.log("[v0] Team collaboration WebSocket connected")
+      console.log("Team collaboration WebSocket connected")
     }
 
     websocket.onmessage = (event) => {
