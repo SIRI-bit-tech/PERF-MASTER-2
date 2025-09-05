@@ -1,8 +1,9 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import User
-from perfmaster.models import Project, PerformanceMetrics, PerformanceAlerts
+# Remove these imports from module level:
+# from django.contrib.auth.models import User
+# from perfmaster.models import Project, PerformanceMetrics, PerformanceAlerts
 
 
 class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
@@ -121,10 +122,11 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
             'data': event['data']
         }))
 
-    # Database operations
+    # Database operations - Import models inside methods
     @database_sync_to_async
     def check_project_access(self, user, project_id):
         """Check if user has access to the project"""
+        from perfmaster.models import Project  # Import inside method
         try:
             project = Project.objects.get(project_id=project_id)
             return project.created_by == user or user in project.team_members.all()
@@ -134,6 +136,7 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def save_performance_metrics(self, data):
         """Save performance metrics to database"""
+        from perfmaster.models import Project, PerformanceMetrics  # Import inside method
         try:
             project = Project.objects.get(project_id=self.project_id)
             
@@ -155,6 +158,7 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_performance_alerts(self, data):
         """Check if performance data triggers any alerts"""
+        from perfmaster.models import Project, PerformanceAlerts  # Import inside method
         try:
             project = Project.objects.get(project_id=self.project_id)
             alerts = []
@@ -203,6 +207,7 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_performance_snapshot(self):
         """Get current performance snapshot"""
+        from perfmaster.models import Project, PerformanceMetrics  # Import inside method
         try:
             project = Project.objects.get(project_id=self.project_id)
             
@@ -219,7 +224,7 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
                 return {'message': 'No recent metrics available'}
             
             # Calculate averages
-            from django.db.models import Avg
+            from django.db.models import Avg, Count
             averages = recent_metrics.aggregate(
                 avg_render_time=Avg('render_time'),
                 avg_memory_usage=Avg('memory_usage'),
@@ -264,7 +269,7 @@ class PerformanceMonitorConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_user_from_token(self, access_token):
         """Get user from JWT token"""
-        from django.contrib.auth.models import User
+        from django.contrib.auth.models import User  # Import inside method
         user_id = access_token['user_id']
         return User.objects.get(id=user_id)
 
@@ -286,6 +291,7 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
         await self.accept()
         
         # Notify team members of user joining
+        from django.utils import timezone
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -297,6 +303,7 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         # Notify team members of user leaving
+        from django.utils import timezone
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -332,6 +339,7 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
 
     async def handle_optimization_notification(self, data):
         """Handle optimization application notifications"""
+        from django.utils import timezone
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -344,6 +352,7 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
 
     async def handle_analysis_sharing(self, data):
         """Handle analysis result sharing"""
+        from django.utils import timezone
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -356,6 +365,7 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
 
     async def handle_comment(self, data):
         """Handle team comments and discussions"""
+        from django.utils import timezone
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -410,6 +420,7 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_project_access(self, user, project_id):
         """Check if user has access to the project"""
+        from perfmaster.models import Project  # Import inside method
         try:
             project = Project.objects.get(project_id=project_id)
             return project.created_by == user or user in project.team_members.all()
@@ -419,6 +430,6 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_user_from_token(self, access_token):
         """Get user from JWT token"""
-        from django.contrib.auth.models import User
+        from django.contrib.auth.models import User  # Import inside method
         user_id = access_token['user_id']
         return User.objects.get(id=user_id)
