@@ -6,6 +6,6 @@ python manage.py migrate --noinput
 # Collect static files
 python manage.py collectstatic --noinput --clear
 
-# Start both Celery and Daphne
+# Start both Celery and Gunicorn with ASGI support
 celery -A perfmaster worker --pool=solo --loglevel=info & 
-daphne -b 0.0.0.0 -p ${PORT:-8000} perfmaster.asgi:application
+gunicorn perfmaster.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --workers 3 --timeout 30
