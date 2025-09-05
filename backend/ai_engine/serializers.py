@@ -31,7 +31,7 @@ class OptimizationSuggestionSerializer(serializers.ModelSerializer):
         fields = [
             'suggestion_id', 'analysis', 'analysis_project', 'type',
             'description', 'code_changes', 'impact_estimate', 'status',
-            'priority', 'created_at', 'applied_at'
+            'priority', 'created_at', 'applied_at', 'confidence_score'  # ✅ Added this
         ]
         read_only_fields = ['suggestion_id', 'created_at', 'applied_at']
 
