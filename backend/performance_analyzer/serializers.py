@@ -2,15 +2,16 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from perfmaster.models import (
     Project, PerformanceMetrics, PerformanceSnapshots,
-    ComponentAnalysis, PerformanceAlerts, UserPreferences
+    ComponentAnalysis, PerformanceAlerts, UserPreferences, APIKey
 )
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
-        read_only_fields = ['id']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined']
+        read_only_fields = ['id', 'date_joined']
+
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -146,3 +147,9 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+class APIKeySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = APIKey
+        fields = ['id', 'name', 'key', 'project_id', 'created_at', 'is_active']
+        read_only_fields = ['id', 'key', 'project_id', 'created_at']

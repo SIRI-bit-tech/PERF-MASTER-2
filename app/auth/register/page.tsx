@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { signIn, getSession } from "next-auth/react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,13 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Zap, Mail, Lock, User, Eye, EyeOff } from "lucide-react"
-import { useApi } from "@/lib/api"
-import { useRouter } from "next/navigation"
+import { Separator } from "@/components/ui/separator"
+import { Zap, Github, Chrome, Mail, Lock, User, Eye, EyeOff } from "lucide-react"
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const { register } = useApi()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,39 +23,99 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState<string | null>(null)
   const [error, setError] = useState("")
+  const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    getSession().then((session) => {
+      if (session) {
+        router.push("/analytics")
+      }
+    })
+  }, [router])
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    if (error) setError("")
+  }
+
+  const handleEmailPasswordRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    setIsLoading("credentials")
     setError("")
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match")
-      setIsLoading(false)
+      setIsLoading(null)
       return
     }
 
     if (!acceptTerms) {
       setError("Please accept the Terms of Service and Privacy Policy")
-      setIsLoading(false)
+      setIsLoading(null)
       return
     }
 
     try {
-      await register(formData.name, formData.email, formData.password)
-      router.push("/auth/login?message=Registration successful. Please sign in.")
+      // Register with Django backend
+      const registerResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+
+      const registerData = await registerResponse.json()
+
+      if (registerResponse.ok) {
+        // Auto-login after successful registration
+        const loginResult = await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        })
+
+        if (loginResult?.error) {
+          setError("Registration successful, but login failed. Please try signing in.")
+        } else {
+          router.push("/analytics")
+        }
+      } else {
+        setError(registerData.error || "Registration failed")
+      }
     } catch (err) {
-      setError("Registration failed. Please try again.")
+      setError("An error occurred. Please try again.")
     } finally {
-      setIsLoading(false)
+      setIsLoading(null)
     }
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    if (error) setError("")
+  const handleOAuthSignIn = async (provider: string) => {
+    setIsLoading(provider)
+    setError("")
+
+    try {
+      const result = await signIn(provider, {
+        callbackUrl: "/analytics",
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Registration failed. Please try again.")
+      } else if (result?.url) {
+        router.push(result.url)
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setIsLoading(null)
+    }
   }
 
   return (
@@ -83,14 +140,15 @@ export default function RegisterPage() {
               Join PerfMaster and start optimizing your applications
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert className="bg-red-900/50 border-red-700 text-red-300">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert className="bg-red-900/50 border-red-700 text-red-300">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
+            {/* Email/Password Registration Form */}
+            <form onSubmit={handleEmailPasswordRegister} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-slate-200">
                   Full Name
@@ -203,20 +261,55 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                disabled={isLoading}
+                disabled={isLoading !== null}
               >
-                {isLoading ? "Creating Account..." : "Create Account"}
+                {isLoading === "credentials" ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-slate-400">
-                Already have an account?{" "}
-                <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 transition-colors">
-                  Sign in
-                </Link>
-              </p>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-slate-900 text-slate-400">Or continue with</span>
+              </div>
             </div>
+
+            {/* OAuth Providers */}
+            <Button
+              onClick={() => handleOAuthSignIn("github")}
+              disabled={isLoading !== null}
+              className="w-full bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              <Github className="mr-2 h-5 w-5" />
+              {isLoading === "github" ? "Connecting..." : "Continue with GitHub"}
+            </Button>
+
+            <Button
+              onClick={() => handleOAuthSignIn("google")}
+              disabled={isLoading !== null}
+              variant="outline"
+              className="w-full border-slate-600 hover:bg-slate-800 text-white"
+            >
+              <Chrome className="mr-2 h-5 w-5" />
+              {isLoading === "google" ? "Connecting..." : "Continue with Google"}
+            </Button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-slate-900 text-slate-400">Already have an account?</span>
+              </div>
+            </div>
+
+            <Button asChild variant="outline" className="w-full border-slate-600 hover:bg-slate-800">
+              <Link href="/auth/login">
+                Sign In
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

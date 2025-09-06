@@ -140,20 +140,37 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# CORS settings - Updated to use environment variables
-CORS_ALLOWED_ORIGINS = []
+# Production HTTPS and Security Settings
+if not DEBUG:
+    # Security headers
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    
+    # HSTS settings
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # SSL/HTTPS settings
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+    # Production CORS - Replace with your actual domain
+    production_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS_PROD', 'https://your-domain.com,https://www.your-domain.com')
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in production_cors_origins.split(',') if origin.strip()]
+else:
+    # Development CORS
+    dev_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in dev_cors_origins.split(',') if origin.strip()]
+
+# Remove the old CORS configuration section since it's now handled above
 CORS_ALLOWED_ORIGIN_REGEXES = []
-
-# Get CORS origins from environment variable
-cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
-if cors_origins:
-    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
-
-
-
 CORS_ALLOW_CREDENTIALS = True
 
-# Additional CORS settings you might want to configure via environment variables
+# Additional CORS settings
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -166,7 +183,6 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# You can also make these configurable via environment variables
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 // Add WebSocket base URL
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"
 export interface PerformanceMetrics {
@@ -299,9 +299,9 @@ class APIClient {
   }
 
   // Analytics
-  async getAnalytics(timeRange: string, projectId: string): Promise<any> {
-    return this.request(`/analytics/?range=${timeRange}&project=${projectId}`)
-  }
+async getAnalytics(timeRange: string, projectId: string): Promise<any> {
+  return this.request(`/api/v1/analytics/?range=${timeRange}&project=${projectId}`)
+}
 }
 
 export const apiClient = new APIClient()

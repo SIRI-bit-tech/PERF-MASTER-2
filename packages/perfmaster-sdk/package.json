@@ -1,0 +1,20 @@
+{
+    "name": "perfmaster-sdk",
+    "version": "1.0.0",
+    "description": "Real-time performance monitoring SDK for PerfMaster",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+      "build": "tsc",
+      "dev": "tsc --watch",
+      "prepublishOnly": "npm run build"
+    },
+    "keywords": ["performance", "monitoring", "analytics", "real-time"],
+    "author": "PerfMaster",
+    "license": "MIT",
+    "files": ["dist"],
+    "devDependencies": {
+      "typescript": "^5.0.0"
+    }
+  }

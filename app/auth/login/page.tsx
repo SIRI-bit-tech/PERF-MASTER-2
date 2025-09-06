@@ -1,16 +1,16 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import { signIn, getSession } from "next-auth/react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Zap, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import { useApi } from "@/lib/api"
-import { useRouter } from "next/navigation"
+import { Separator } from "@/components/ui/separator"
+import { Zap, Github, Chrome, Mail, Lock, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -18,55 +18,100 @@ export default function LoginPage() {
     password: "",
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState<string | null>(null)
   const [error, setError] = useState("")
-
-  const { login } = useApi()
   const router = useRouter()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+  useEffect(() => {
+    getSession().then((session) => {
+      if (session) {
+        router.push("/analytics")
+      }
     })
+  }, [router])
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    if (error) setError("")
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    setIsLoading("credentials")
     setError("")
 
     try {
-      await login(formData.email, formData.password)
-      router.push("/")
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Invalid email or password")
+      } else {
+        router.push("/analytics")
+      }
     } catch (err) {
-      setError("Invalid email or password. Please try again.")
+      setError("An error occurred. Please try again.")
     } finally {
-      setIsLoading(false)
+      setIsLoading(null)
+    }
+  }
+
+  const handleOAuthSignIn = async (provider: string) => {
+    setIsLoading(provider)
+    setError("")
+
+    try {
+      const result = await signIn(provider, {
+        callbackUrl: "/analytics",
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Authentication failed. Please try again.")
+      } else if (result?.url) {
+        router.push(result.url)
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setIsLoading(null)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <div className="w-full max-w-md p-8">
-        <Card className="backdrop-blur-sm bg-slate-900/90 border-slate-700">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+              <Zap className="h-7 w-7 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold text-white">Welcome Back</CardTitle>
-            <CardDescription className="text-slate-400">
+            <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              PerfMaster
+            </span>
+          </Link>
+        </div>
+
+        <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-white">Welcome Back</CardTitle>
+            <CardDescription className="text-slate-300">
               Sign in to your PerfMaster account
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert className="border-red-500 bg-red-500/10">
-                  <AlertDescription className="text-red-400">{error}</AlertDescription>
-                </Alert>
-              )}
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert className="bg-red-900/50 border-red-700 text-red-300">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
+            {/* Email/Password Form */}
+            <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-300">
                   Email
@@ -79,7 +124,7 @@ export default function LoginPage() {
                     type="email"
                     placeholder="Enter your email"
                     value={formData.email}
-                    onChange={handleChange}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                     className="pl-10 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
                     required
                   />
@@ -98,7 +143,7 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={formData.password}
-                    onChange={handleChange}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
                     className="pl-10 pr-10 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
                     required
                   />
@@ -115,20 +160,55 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={isLoading}
+                disabled={isLoading !== null}
               >
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading === "credentials" ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-slate-400">
-                Don't have an account?{" "}
-                <Link href="/auth/register" className="text-blue-400 hover:text-blue-300">
-                  Sign up
-                </Link>
-              </p>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-slate-900 text-slate-400">Or continue with</span>
+              </div>
             </div>
+
+            {/* OAuth Providers */}
+            <Button
+              onClick={() => handleOAuthSignIn("github")}
+              disabled={isLoading !== null}
+              className="w-full bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              <Github className="mr-2 h-5 w-5" />
+              {isLoading === "github" ? "Connecting..." : "Continue with GitHub"}
+            </Button>
+
+            <Button
+              onClick={() => handleOAuthSignIn("google")}
+              disabled={isLoading !== null}
+              variant="outline"
+              className="w-full border-slate-600 hover:bg-slate-800 text-white"
+            >
+              <Chrome className="mr-2 h-5 w-5" />
+              {isLoading === "google" ? "Connecting..." : "Continue with Google"}
+            </Button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-slate-900 text-slate-400">Don't have an account?</span>
+              </div>
+            </div>
+
+            <Button asChild variant="outline" className="w-full border-slate-600 hover:bg-slate-800">
+              <Link href="/auth/register">
+                Create Account
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

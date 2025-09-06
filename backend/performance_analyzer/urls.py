@@ -15,4 +15,11 @@ urlpatterns = [
     # Authentication endpoints
     path('auth/login/', views.login_view, name='auth-login'),
     path('auth/register/', views.register_view, name='auth-register'),
+    path('auth/profile/', views.get_user_profile, name='user-profile'),
+    path('auth/profile/update/', views.update_user_profile, name='update-profile'),
+    # API Key management
+    path('keys/generate/', views.generate_api_key, name='generate-api-key'),
+    path('keys/', views.list_user_api_keys, name='list-api-keys'),
+    path('keys/<int:key_id>/delete/', views.delete_api_key, name='delete-api-key'),
+    path('analytics/', views.get_analytics, name='analytics'),
 ]

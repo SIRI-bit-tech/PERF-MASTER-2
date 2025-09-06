@@ -1,4 +1,5 @@
 import json
+import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 # Remove these imports from module level:
@@ -433,3 +434,174 @@ class TeamCollaborationConsumer(AsyncWebsocketConsumer):
         from django.contrib.auth.models import User  # Import inside method
         user_id = access_token['user_id']
         return User.objects.get(id=user_id)
+    
+class AnalyticsConsumer(AsyncWebsocketConsumer):
+    """WebSocket consumer for real-time analytics updates"""
+    
+    async def connect(self):
+        self.user = self.scope.get('user')
+        self.room_group_name = 'analytics_global'
+        
+        # Join analytics room
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        # Send initial analytics data
+        await self.send_initial_analytics()
+        
+        # Start periodic updates
+        self.update_task = asyncio.create_task(self.periodic_updates())
+    
+    async def disconnect(self, close_code):
+        # Stop periodic updates
+        if hasattr(self, 'update_task'):
+            self.update_task.cancel()
+        
+        # Leave analytics room
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+    
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+            
+            if message_type == 'request_update':
+                await self.send_analytics_update()
+            elif message_type == 'subscribe_metrics':
+                await self.handle_metrics_subscription(data)
+                
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Invalid JSON format'
+            }))
+    
+    async def handle_metrics_subscription(self, data):
+        """Handle subscription to specific analytics metrics"""
+        metrics_types = data.get('metrics', ['all'])
+        
+        # Store subscription preferences
+        self.subscribed_metrics = metrics_types
+        
+        await self.send(text_data=json.dumps({
+            'type': 'subscription_confirmed',
+            'metrics': metrics_types
+        }))
+    
+    async def periodic_updates(self):
+        """Send periodic analytics updates every 30 seconds"""
+        while True:
+            try:
+                await asyncio.sleep(30)  # Update every 30 seconds
+                await self.send_analytics_update()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                await self.send(text_data=json.dumps({
+                    'type': 'error',
+                    'message': f'Update failed: {str(e)}'
+                }))
+    
+    async def send_initial_analytics(self):
+        """Send initial analytics data"""
+        try:
+            analytics_data = await self.get_analytics_data()
+            
+            await self.send(text_data=json.dumps({
+                'type': 'initial_analytics',
+                'data': analytics_data
+            }))
+            
+        except Exception as e:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to load analytics: {str(e)}'
+            }))
+    
+    async def send_analytics_update(self):
+        """Send analytics update"""
+        try:
+            analytics_data = await self.get_analytics_data()
+            
+            await self.send(text_data=json.dumps({
+                'type': 'analytics_update',
+                'data': analytics_data
+            }))
+            
+        except Exception as e:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to update analytics: {str(e)}'
+            }))
+    
+    # WebSocket message handlers
+    async def performance_alert(self, event):
+        """Send performance alert notification"""
+        await self.send(text_data=json.dumps({
+            'type': 'alert',
+            'data': event['data']
+        }))
+    
+    async def optimization_update(self, event):
+        """Send optimization update notification"""
+        await self.send(text_data=json.dumps({
+            'type': 'optimization_update',
+            'data': event['data']
+        }))
+    
+    @database_sync_to_async
+    def get_analytics_data(self):
+        """Get current analytics data"""
+        from perfmaster.models import Project, PerformanceMetrics, PerformanceAlerts
+        from django.db.models import Q, Avg, Count
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if not self.user or not self.user.is_authenticated:
+            return {'error': 'Authentication required'}
+        
+        # Get user's projects
+        projects = Project.objects.filter(
+            Q(created_by=self.user) | Q(team_members=self.user)
+        ).distinct()
+        
+        # Get recent metrics (last 7 days)
+        start_date = timezone.now() - timedelta(days=7)
+        metrics = PerformanceMetrics.objects.filter(
+            project__in=projects,
+            timestamp__gte=start_date
+        )
+        
+        # Calculate current averages
+        current_avg = metrics.aggregate(
+            avg_lcp=Avg('core_web_vitals__lcp'),
+            avg_fid=Avg('core_web_vitals__fid'),
+            avg_cls=Avg('core_web_vitals__cls'),
+            avg_render_time=Avg('render_time')
+        )
+        
+        # Get active alerts
+        active_alerts = PerformanceAlerts.objects.filter(
+            project__in=projects,
+            is_resolved=False
+        ).count()
+        
+        return {
+            'timestamp': timezone.now().isoformat(),
+            'metrics_count': metrics.count(),
+            'active_alerts': active_alerts,
+            'average_performance': {
+                'lcp': round(current_avg['avg_lcp'] or 0, 2),
+                'fid': round(current_avg['avg_fid'] or 0, 2),
+                'cls': round(current_avg['avg_cls'] or 0, 2),
+                'render_time': round(current_avg['avg_render_time'] or 0, 2)
+            },
+            'projects_active': projects.count()
+        }    

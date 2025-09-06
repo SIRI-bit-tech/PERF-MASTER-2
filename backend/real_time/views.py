@@ -88,3 +88,19 @@ def get_realtime_metrics(request, project_id):
         'total_metrics': metrics.count(),
         'component_metrics': component_metrics
     })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_analytics_realtime(request):
+    """Get real-time analytics status and WebSocket info"""
+    return Response({
+        'status': 'active',
+        'websocket_endpoint': '/ws/analytics/',
+        'update_interval': 30,  # seconds
+        'features': [
+            'real_time_metrics',
+            'live_alerts',
+            'performance_trends',
+            'optimization_updates'
+        ]
+    })

@@ -245,3 +245,29 @@ class PerformanceSnapshots(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.created_at.date()})"
+    
+class APIKey(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_keys')
+    name = models.CharField(max_length=100)
+    key = models.CharField(max_length=64, unique=True)
+    project_id = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    def save(self, *args, **kwargs):
+        import secrets
+        import uuid
+        
+        if not self.key:
+            self.key = secrets.token_hex(32)
+        if not self.project_id:
+            self.project_id = f"project-{uuid.uuid4().hex[:16]}"
+        super().save(*args, **kwargs)
+    
+    class Meta:
+        app_label = 'perfmaster'
+        db_table = 'perfmaster_apikeys'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} - {self.project_id}"    

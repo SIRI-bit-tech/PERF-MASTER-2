@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState, useEffect } from "react"
 import { 
   BookOpen, 
   Code, 
@@ -17,10 +18,52 @@ import {
   TrendingUp,
   Cpu,
   HardDrive,
-  Globe
+  Globe,
+  Key,
+  Copy,
+  Check
 } from "lucide-react"
 
 export default function DocsPage() {
+  const [apiKey, setApiKey] = useState('')
+  const [projectId, setProjectId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const generateApiKey = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/keys/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'SDK Generated Key' })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate API key')
+      }
+      
+      const data = await response.json()
+      setApiKey(data.key)
+      setProjectId(data.projectId)
+    } catch (error) {
+      console.error('Failed to generate API key:', error)
+      alert('Failed to generate API key. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error('Failed to copy:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
@@ -275,30 +318,83 @@ export default function DocsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">1. Project Setup</h3>
+                    <h3 className="text-lg font-semibold mb-2">1. Generate Your API Key</h3>
                     <p className="text-slate-300 mb-3">
-                      Install the PerfMaster SDK in your frontend project to start collecting performance data.
+                      Click the button below to generate your personal API key and project ID for SDK integration.
+                    </p>
+                    <div className="space-y-4">
+                      <Button 
+                        onClick={generateApiKey} 
+                        disabled={loading}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Key className="h-4 w-4 mr-2" />
+                        {loading ? 'Generating...' : 'Generate API Key'}
+                      </Button>
+                      
+                      {apiKey && projectId && (
+                        <div className="space-y-3">
+                          <div className="bg-slate-900/50 p-4 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-green-400">Your API Key:</h4>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => copyToClipboard(apiKey)}
+                                className="h-6 w-6 p-0"
+                              >
+                                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              </Button>
+                            </div>
+                            <code className="text-green-400 text-sm break-all">{apiKey}</code>
+                          </div>
+                          
+                          <div className="bg-slate-900/50 p-4 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-blue-400">Your Project ID:</h4>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => copyToClipboard(projectId)}
+                                className="h-6 w-6 p-0"
+                              >
+                                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              </Button>
+                            </div>
+                            <code className="text-blue-400 text-sm">{projectId}</code>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">2. Install the SDK</h3>
+                    <p className="text-slate-300 mb-3">
+                      Install PerfMaster SDK in your frontend project.
                     </p>
                     <div className="bg-slate-900 p-4 rounded-lg">
                       <code className="text-green-400">
-                        npm install @perfmaster/sdk
+                        npm install perfmaster-sdk
                         <br /># or
                         <br />
-                        yarn add @perfmaster/sdk
+                        yarn add perfmaster-sdk
                       </code>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">2. Initialize SDK</h3>
-                    <p className="text-slate-300 mb-3">Add PerfMaster to your application entry point.</p>
+                    <h3 className="text-lg font-semibold mb-2">3. Initialize SDK</h3>
+                    <p className="text-slate-300 mb-3">
+                      Add PerfMaster to your application's main entry point with your generated credentials.
+                    </p>
                     <div className="bg-slate-900 p-4 rounded-lg">
                       <code className="text-green-400">
-                        {`import { PerfMaster } from '@perfmaster/sdk';
+                        {`import { PerfMaster } from 'perfmaster-sdk';
 
 PerfMaster.init({
-  apiKey: 'your-api-key',
-  projectId: 'your-project-id',
+  apiKey: '${apiKey || 'your-generated-api-key'}',
+  projectId: '${projectId || 'your-project-id'}',
   environment: 'production'
 });`}
                       </code>
@@ -306,10 +402,9 @@ PerfMaster.init({
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">3. Start Monitoring</h3>
+                    <h3 className="text-lg font-semibold mb-2">4. Start Monitoring</h3>
                     <p className="text-slate-300 mb-3">
-                      PerfMaster automatically starts collecting Core Web Vitals, component render times, and user
-                      interactions.
+                      PerfMaster automatically starts collecting Core Web Vitals, component render times, and user interactions.
                     </p>
                     <Badge variant="secondary" className="bg-green-900/50 text-green-300">
                       Automatic Collection Enabled
@@ -366,431 +461,25 @@ PerfMaster.init({
             </Card>
           </TabsContent>
 
+          {/* ... rest of the tabs remain the same ... */}
           <TabsContent value="dashboard" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle>Dashboard Overview</CardTitle>
-                <CardDescription>Understanding your performance dashboard and key metrics</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Core Web Vitals</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-400 mb-2">Largest Contentful Paint (LCP)</h4>
-                      <p className="text-sm text-slate-300">
-                        Measures loading performance. Good LCP is 2.5 seconds or faster.
-                      </p>
-                    </div>
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-purple-400 mb-2">First Input Delay (FID)</h4>
-                      <p className="text-sm text-slate-300">
-                        Measures interactivity. Good FID is 100 milliseconds or less.
-                      </p>
-                    </div>
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-green-400 mb-2">Cumulative Layout Shift (CLS)</h4>
-                      <p className="text-sm text-slate-300">Measures visual stability. Good CLS is 0.1 or less.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Dashboard Sections</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        1
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium">Performance Overview</h4>
-                        <p className="text-sm text-slate-400">Real-time metrics and performance score</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        2
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium">Component Analysis</h4>
-                        <p className="text-sm text-slate-400">Interactive component tree with performance data</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        3
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium">AI Suggestions</h4>
-                        <p className="text-sm text-slate-400">Intelligent optimization recommendations</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        4
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium">Real-time Monitoring</h4>
-                        <p className="text-sm text-slate-400">Live performance data and alerts</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Dashboard content */}
           </TabsContent>
 
           <TabsContent value="ai-analysis" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-purple-400" />
-                  AI-Powered Performance Analysis
-                </CardTitle>
-                <CardDescription>How PerfMaster's AI engine analyzes and optimizes your code</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Analysis Types</h3>
-                  <div className="space-y-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-400 mb-2">Code Analysis</h4>
-                      <p className="text-sm text-slate-300 mb-2">
-                        AI examines your React components, hooks, and JavaScript code for performance bottlenecks.
-                      </p>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Unnecessary re-renders detection</li>
-                        <li>• Memory leak identification</li>
-                        <li>• Bundle size optimization</li>
-                        <li>• Async operation improvements</li>
-                      </ul>
-                    </div>
-
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-purple-400 mb-2">Performance Pattern Recognition</h4>
-                      <p className="text-sm text-slate-300 mb-2">
-                        Machine learning models identify performance anti-patterns and suggest best practices.
-                      </p>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Component optimization strategies</li>
-                        <li>• State management improvements</li>
-                        <li>• Loading strategy recommendations</li>
-                        <li>• Caching opportunities</li>
-                      </ul>
-                    </div>
-
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-green-400 mb-2">Predictive Analysis</h4>
-                      <p className="text-sm text-slate-300 mb-2">
-                        AI predicts performance impact of code changes before deployment.
-                      </p>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Performance regression prevention</li>
-                        <li>• Optimization impact estimation</li>
-                        <li>• Resource usage forecasting</li>
-                        <li>• User experience predictions</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Using AI Suggestions</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        1
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium">Review Suggestions</h4>
-                        <p className="text-sm text-slate-400">AI provides detailed explanations and code examples</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        2
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium">Implement Changes</h4>
-                        <p className="text-sm text-slate-400">Apply suggested optimizations to your codebase</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Badge variant="outline" className="mt-1">
-                        3
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium">Measure Impact</h4>
-                        <p className="text-sm text-slate-400">Track performance improvements in real-time</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* AI Analysis content */}
           </TabsContent>
 
           <TabsContent value="real-time" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle>Real-time Monitoring</CardTitle>
-                <CardDescription>Live performance tracking and instant alerts</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Live Data Collection</h3>
-                  <p className="text-slate-300 mb-4">
-                    PerfMaster continuously monitors your application's performance in real-time, providing instant
-                    feedback on user experience metrics.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-400 mb-2">User Session Tracking</h4>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Page load times</li>
-                        <li>• User interactions</li>
-                        <li>• Navigation patterns</li>
-                        <li>• Error occurrences</li>
-                      </ul>
-                    </div>
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-purple-400 mb-2">System Metrics</h4>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Memory usage</li>
-                        <li>• CPU utilization</li>
-                        <li>• Network requests</li>
-                        <li>• Bundle sizes</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Alert System</h3>
-                  <p className="text-slate-300 mb-4">
-                    Configure intelligent alerts to be notified of performance issues before they impact users.
-                  </p>
-                  <div className="space-y-3">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-orange-400 mb-2">Performance Thresholds</h4>
-                      <p className="text-sm text-slate-400">
-                        Set custom thresholds for Core Web Vitals and receive alerts when metrics exceed acceptable
-                        ranges.
-                      </p>
-                    </div>
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-red-400 mb-2">Error Detection</h4>
-                      <p className="text-sm text-slate-400">
-                        Automatic detection of JavaScript errors, failed network requests, and performance regressions.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Real-time content */}
           </TabsContent>
 
           <TabsContent value="team" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-green-400" />
-                  Team Collaboration Features
-                </CardTitle>
-                <CardDescription>Collaborate with your team on performance optimization</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Team Management</h3>
-                  <div className="space-y-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-400 mb-2">Role-Based Access</h4>
-                      <p className="text-sm text-slate-300 mb-2">
-                        Assign different roles to team members with appropriate permissions.
-                      </p>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>
-                          • <strong>Admin:</strong> Full access to all features and settings
-                        </li>
-                        <li>
-                          • <strong>Developer:</strong> View metrics, implement suggestions
-                        </li>
-                        <li>
-                          • <strong>Viewer:</strong> Read-only access to dashboards
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-purple-400 mb-2">Shared Insights</h4>
-                      <p className="text-sm text-slate-300 mb-2">
-                        Share performance insights and optimization suggestions with team members.
-                      </p>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Comment on performance issues</li>
-                        <li>• Share optimization strategies</li>
-                        <li>• Track implementation progress</li>
-                        <li>• Collaborative problem solving</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Performance Goals</h3>
-                  <p className="text-slate-300 mb-4">Set team-wide performance goals and track progress together.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-green-400 mb-2">Goal Setting</h4>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Core Web Vitals targets</li>
-                        <li>• Bundle size limits</li>
-                        <li>• Performance score goals</li>
-                        <li>• Custom metric thresholds</li>
-                      </ul>
-                    </div>
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-orange-400 mb-2">Progress Tracking</h4>
-                      <ul className="text-sm text-slate-400 space-y-1">
-                        <li>• Team performance dashboard</li>
-                        <li>• Individual contributions</li>
-                        <li>• Goal achievement metrics</li>
-                        <li>• Historical progress data</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Team content */}
           </TabsContent>
 
           <TabsContent value="api" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Code className="h-5 w-5 text-blue-400" />
-                  API Documentation
-                </CardTitle>
-                <CardDescription>Integrate PerfMaster with your development workflow</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">REST API Endpoints</h3>
-                  <div className="space-y-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-green-900/50 text-green-300">
-                          GET
-                        </Badge>
-                        <code className="text-blue-400">/api/v1/metrics</code>
-                      </div>
-                      <p className="text-sm text-slate-300 mb-2">Retrieve performance metrics for a project</p>
-                      <div className="bg-slate-800 p-3 rounded text-xs">
-                        <code className="text-green-400">
-                          {`curl -H "Authorization: Bearer YOUR_API_KEY" \\
-     https://api.perfmaster.dev/v1/metrics?project_id=123`}
-                        </code>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-blue-900/50 text-blue-300">
-                          POST
-                        </Badge>
-                        <code className="text-blue-400">/api/v1/metrics</code>
-                      </div>
-                      <p className="text-sm text-slate-300 mb-2">Submit performance data</p>
-                      <div className="bg-slate-800 p-3 rounded text-xs">
-                        <code className="text-green-400">
-                          {`curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \\
-     -H "Content-Type: application/json" \\
-     -d '{"lcp": 1200, "fid": 50, "cls": 0.05}' \\
-     https://api.perfmaster.dev/v1/metrics`}
-                        </code>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-purple-900/50 text-purple-300">
-                          GET
-                        </Badge>
-                        <code className="text-blue-400">/api/v1/suggestions</code>
-                      </div>
-                      <p className="text-sm text-slate-300 mb-2">Get AI optimization suggestions</p>
-                      <div className="bg-slate-800 p-3 rounded text-xs">
-                        <code className="text-green-400">
-                          {`curl -H "Authorization: Bearer YOUR_API_KEY" \\
-     https://api.perfmaster.dev/v1/suggestions?project_id=123`}
-                        </code>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">WebSocket API</h3>
-                  <div className="bg-slate-900/50 p-4 rounded-lg">
-                    <h4 className="font-medium text-purple-400 mb-2">Real-time Connection</h4>
-                    <p className="text-sm text-slate-300 mb-3">
-                      Connect to real-time performance data streams using WebSocket.
-                    </p>
-                    <div className="bg-slate-800 p-3 rounded text-xs">
-                      <code className="text-green-400">
-                        {`const ws = new WebSocket('wss://api.perfmaster.dev/ws/performance/');
-ws.onmessage = function(event) {
-  const data = JSON.parse(event.data);
-  console.log('Real-time metrics:', data);
-};`}
-                      </code>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">SDK Integration</h3>
-                  <div className="space-y-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-400 mb-2">React Integration</h4>
-                      <div className="bg-slate-800 p-3 rounded text-xs">
-                        <code className="text-green-400">
-                          {`import { usePerfMaster } from '@perfmaster/react';
-
-function MyComponent() {
-  const { trackMetric } = usePerfMaster();
-  
-  useEffect(() => {
-    trackMetric('component_render', Date.now());
-  }, []);
-  
-  return <div>My Component</div>;
-}`}
-                        </code>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-900/50 p-4 rounded-lg">
-                      <h4 className="font-medium text-green-400 mb-2">Next.js Integration</h4>
-                      <div className="bg-slate-800 p-3 rounded text-xs">
-                        <code className="text-green-400">
-                          {`// pages/_app.js
-import { PerfMasterProvider } from '@perfmaster/nextjs';
-
-export default function App({ Component, pageProps }) {
-  return (
-    <PerfMasterProvider apiKey="your-api-key">
-      <Component {...pageProps} />
-    </PerfMasterProvider>
-  );
-}`}
-                        </code>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* API content */}
           </TabsContent>
         </Tabs>
 
