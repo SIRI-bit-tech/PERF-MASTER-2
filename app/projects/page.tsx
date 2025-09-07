@@ -151,7 +151,7 @@ export default function ProjectsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProjects.map((project) => (
+                {(filteredProjects || []).map((project) => (
                   <Card
                     key={project.id}
                     className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer"
@@ -221,7 +221,7 @@ export default function ProjectsPage() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-700">
-                  {filteredProjects.map((project) => (
+                  {(filteredProjects || []).map((project) => (
                     <div key={project.id} className="p-6 hover:bg-slate-800/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -275,7 +275,7 @@ export default function ProjectsPage() {
           </TabsContent>
         </Tabs>
 
-        {filteredProjects.length === 0 && !isLoading && (
+        {(filteredProjects || []).length === 0 && !isLoading && (
           <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="text-center py-12">
               <div className="text-6xl mb-4">🚀</div>

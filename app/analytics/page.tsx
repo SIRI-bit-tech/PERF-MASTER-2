@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BarChart3, TrendingUp, TrendingDown, Clock, Users, Globe, Zap, AlertTriangle, Wifi, WifiOff, RefreshCw } from "lucide-react"
-import { useApi } from "@/lib/api"
+import { useApi, syncAuthToken } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useIsMobile } from "@/components/ui/use-mobile"
 import { useAuthSync } from "@/hooks/use-auth-sync"
@@ -56,7 +56,10 @@ export default function AnalyticsPage() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    loadAnalytics()
+    // Sync auth token before loading analytics
+    syncAuthToken().then(() => {
+      loadAnalytics()
+    })
   }, [timeRange, selectedProject])
 
   useEffect(() => {

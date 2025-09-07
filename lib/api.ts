@@ -76,13 +76,13 @@ class APIClient {
       ...options.headers,
     }
 
-    // Get token from stored token or NextAuth session
+    // Try to get token from NextAuth session if not stored locally
     let token = this.token
     if (!token && typeof window !== 'undefined') {
       try {
         const { getSession } = await import('next-auth/react')
         const session = await getSession()
-        token = session?.user?.accessToken || null
+        token = (session?.user as any)?.accessToken || null
         if (token) {
           this.setAuthToken(token)
         }
@@ -91,7 +91,7 @@ class APIClient {
       }
     }
 
-    // Include JWT token in headers
+    // Include JWT token in headers if available
     if (token) {
       (headers as Record<string, string>).Authorization = `Bearer ${token}`
     }
@@ -336,10 +336,24 @@ export async function getAuthToken(): Promise<string | null> {
   try {
     const { getSession } = await import('next-auth/react')
     const session = await getSession()
-    return session?.user?.accessToken || null
+    return (session?.user as any)?.accessToken || null
   } catch (error) {
     console.error('Error getting auth token:', error)
     return null
+  }
+}
+
+// Function to sync token from session to API client
+export async function syncAuthToken(): Promise<void> {
+  if (typeof window === 'undefined') return
+  
+  try {
+    const token = await getAuthToken()
+    if (token) {
+      apiClient.setAuthToken(token)
+    }
+  } catch (error) {
+    console.error('Error syncing auth token:', error)
   }
 }
 

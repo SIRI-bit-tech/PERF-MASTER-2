@@ -50,10 +50,10 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid email or password")
       } else {
-        // Set the auth token in the API client
-        const { apiClient } = await import("@/lib/api")
+        // Get the token from the session and set it in the API client
         const session = await getSession()
         if (session?.user?.accessToken) {
+          const { apiClient } = await import("@/lib/api")
           apiClient.setAuthToken(session.user.accessToken)
         }
         router.push("/analytics")

@@ -36,6 +36,7 @@ export function Navigation() {
   const { data: session, status } = useSession()
 
   const isAuthenticated = status === "authenticated"
+  const isLoading = status === "loading"
 
   return (
     <>
@@ -79,7 +80,12 @@ export function Navigation() {
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-3">
-              {isAuthenticated ? (
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-slate-700 rounded-full animate-pulse"></div>
+                  <div className="w-16 h-4 bg-slate-700 rounded animate-pulse"></div>
+                </div>
+              ) : isAuthenticated ? (
                 <>
                   <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white">
                     <Bell className="h-4 w-4" />
@@ -96,7 +102,18 @@ export function Navigation() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => signOut()}
+                    onClick={async () => {
+                      try {
+                        await signOut({ redirect: false })
+                        // Clear the API client token
+                        const { apiClient } = await import('@/lib/api')
+                        apiClient.setAuthToken('')
+                        // Redirect to home page
+                        window.location.href = '/'
+                      } catch (error) {
+                        console.error('Logout error:', error)
+                      }
+                    }}
                     className="text-slate-300 hover:text-white"
                   >
                     <LogOut className="h-4 w-4" />
@@ -147,7 +164,12 @@ export function Navigation() {
         {isMobileMenuOpen && (
           <div className="bg-slate-900/98 backdrop-blur-sm border-t border-slate-700">
             <div className="container mx-auto px-4 py-4">
-              {isAuthenticated ? (
+              {isLoading ? (
+                <div className="space-y-3">
+                  <div className="w-full h-10 bg-slate-700 rounded animate-pulse"></div>
+                  <div className="w-full h-10 bg-slate-700 rounded animate-pulse"></div>
+                </div>
+              ) : isAuthenticated ? (
                 <div className="space-y-2">
                   {navigation.map((item) => {
                     const isActive = pathname === item.href
@@ -169,7 +191,19 @@ export function Navigation() {
                     )
                   })}
                   <Button 
-                    onClick={() => signOut()}
+                    onClick={async () => {
+                      try {
+                        await signOut({ redirect: false })
+                        // Clear the API client token
+                        const { apiClient } = await import('@/lib/api')
+                        apiClient.setAuthToken('')
+                        // Close mobile menu and redirect
+                        setIsMobileMenuOpen(false)
+                        window.location.href = '/'
+                      } catch (error) {
+                        console.error('Logout error:', error)
+                      }
+                    }}
                     className="w-full justify-start text-slate-300 hover:text-white"
                     variant="ghost"
                   >

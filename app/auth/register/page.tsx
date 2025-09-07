@@ -76,7 +76,6 @@ export default function RegisterPage() {
       if (registerResponse.ok) {
         // Set the auth token from registration response
         if (registerData.token) {
-          // Import the API client to set the token
           const { apiClient } = await import("@/lib/api")
           apiClient.setAuthToken(registerData.token)
         }
@@ -91,6 +90,12 @@ export default function RegisterPage() {
         if (loginResult?.error) {
           setError("Registration successful, but login failed. Please try signing in.")
         } else {
+          // Get the token from the session and set it in the API client
+          const session = await getSession()
+          if (session?.user?.accessToken) {
+            const { apiClient } = await import("@/lib/api")
+            apiClient.setAuthToken(session.user.accessToken)
+          }
           router.push("/analytics")
         }
       } else {

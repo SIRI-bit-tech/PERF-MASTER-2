@@ -4,6 +4,10 @@ import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt",
+  },
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID!,
@@ -61,8 +65,9 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
-      if (account) {
-        token.accessToken = account.access_token || (user as any)?.accessToken
+      // Only store the access token if it's from our Django backend (not OAuth providers)
+      if (account && account.provider === 'credentials') {
+        token.accessToken = (user as any)?.accessToken
       }
       return token
     },
