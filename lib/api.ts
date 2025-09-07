@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
 // Add WebSocket base URL
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"
 export interface PerformanceMetrics {
@@ -76,9 +76,24 @@ class APIClient {
       ...options.headers,
     }
 
+    // Get token from stored token or NextAuth session
+    let token = this.token
+    if (!token && typeof window !== 'undefined') {
+      try {
+        const { getSession } = await import('next-auth/react')
+        const session = await getSession()
+        token = session?.user?.accessToken || null
+        if (token) {
+          this.setAuthToken(token)
+        }
+      } catch (error) {
+        console.error('Error getting token from session:', error)
+      }
+    }
+
     // Include JWT token in headers
-    if (this.token) {
-      (headers as Record<string, string>).Authorization = `Bearer ${this.token}`
+    if (token) {
+      (headers as Record<string, string>).Authorization = `Bearer ${token}`
     }
 
     const response = await fetch(url, {
@@ -300,7 +315,7 @@ class APIClient {
 
   // Analytics
 async getAnalytics(timeRange: string, projectId: string): Promise<any> {
-  return this.request(`/api/v1/analytics/?range=${timeRange}&project=${projectId}`)
+  return this.request(`/analytics/?range=${timeRange}&project=${projectId}`)
 }
 }
 
@@ -311,6 +326,20 @@ if (typeof window !== 'undefined') {
   const storedToken = localStorage.getItem('auth_token')
   if (storedToken) {
     apiClient.setAuthToken(storedToken)
+  }
+}
+
+// Function to get token from NextAuth session
+export async function getAuthToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null
+  
+  try {
+    const { getSession } = await import('next-auth/react')
+    const session = await getSession()
+    return session?.user?.accessToken || null
+  } catch (error) {
+    console.error('Error getting auth token:', error)
+    return null
   }
 }
 

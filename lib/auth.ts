@@ -62,11 +62,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, profile, user }) {
       if (account) {
-        token.accessToken = account.access_token || user?.accessToken
+        token.accessToken = account.access_token || (user as any)?.accessToken
       }
       return token
     },
     async session({ session, token }) {
+      // Add the access token to the session
+      if (token.accessToken) {
+        (session.user as any).accessToken = token.accessToken
+      }
       return session
     },
   },

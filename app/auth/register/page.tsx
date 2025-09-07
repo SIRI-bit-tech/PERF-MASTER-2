@@ -74,6 +74,13 @@ export default function RegisterPage() {
       const registerData = await registerResponse.json()
 
       if (registerResponse.ok) {
+        // Set the auth token from registration response
+        if (registerData.token) {
+          // Import the API client to set the token
+          const { apiClient } = await import("@/lib/api")
+          apiClient.setAuthToken(registerData.token)
+        }
+
         // Auto-login after successful registration
         const loginResult = await signIn("credentials", {
           email: formData.email,
@@ -243,7 +250,7 @@ export default function RegisterPage() {
                 <Checkbox
                   id="terms"
                   checked={acceptTerms}
-                  onCheckedChange={setAcceptTerms}
+                  onCheckedChange={(checked) => setAcceptTerms(checked === true)}
                   className="border-slate-600 data-[state=checked]:bg-blue-600"
                 />
                 <Label htmlFor="terms" className="text-sm text-slate-300">

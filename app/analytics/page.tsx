@@ -10,6 +10,7 @@ import { BarChart3, TrendingUp, TrendingDown, Clock, Users, Globe, Zap, AlertTri
 import { useApi } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useIsMobile } from "@/components/ui/use-mobile"
+import { useAuthSync } from "@/hooks/use-auth-sync"
 
 interface AnalyticsData {
   performance_trends: {
@@ -41,6 +42,7 @@ export default function AnalyticsPage() {
   const { getAnalytics } = useApi()
   const { toast } = useToast()
   const isMobile = useIsMobile()
+  const { session, status } = useAuthSync()
   
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [timeRange, setTimeRange] = useState("7d")
