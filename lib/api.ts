@@ -69,6 +69,10 @@ class APIClient {
     }
   }
 
+  getAuthToken(): string | null {
+    return this.token
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
     const headers: HeadersInit = {
@@ -76,18 +80,26 @@ class APIClient {
       ...options.headers,
     }
 
-    // Try to get token from NextAuth session if not stored locally
+    // Try to get token from stored token, localStorage, or NextAuth session
     let token = this.token
     if (!token && typeof window !== 'undefined') {
-      try {
-        const { getSession } = await import('next-auth/react')
-        const session = await getSession()
-        token = (session?.user as any)?.accessToken || null
-        if (token) {
-          this.setAuthToken(token)
+      // First try localStorage
+      const storedToken = localStorage.getItem('auth_token')
+      if (storedToken) {
+        this.token = storedToken
+        token = storedToken
+      } else {
+        // Fallback to NextAuth session
+        try {
+          const { getSession } = await import('next-auth/react')
+          const session = await getSession()
+          token = (session?.user as any)?.accessToken || null
+          if (token) {
+            this.setAuthToken(token)
+          }
+        } catch (error) {
+          console.error('Error getting token from session:', error)
         }
-      } catch (error) {
-        console.error('Error getting token from session:', error)
       }
     }
 

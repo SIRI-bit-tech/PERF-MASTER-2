@@ -56,13 +56,13 @@ export default function AnalyticsPage() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    // Sync auth token before loading analytics
-    syncAuthToken().then(() => {
-      loadAnalytics()
-    })
+    // Load analytics data when time range or project changes
+    loadAnalytics()
   }, [timeRange, selectedProject])
 
   useEffect(() => {
+    // Sync auth token on initial load
+    syncAuthToken()
     setupWebSocket()
 
     return () => {
