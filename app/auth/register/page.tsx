@@ -59,7 +59,7 @@ export default function RegisterPage() {
 
     try {
       // Register with Django backend
-      const registerResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+      const registerResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
