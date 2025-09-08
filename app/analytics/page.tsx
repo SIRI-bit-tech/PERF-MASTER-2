@@ -77,9 +77,8 @@ export default function AnalyticsPage() {
 
   const setupWebSocket = () => {
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.host
-      const wsUrl = `${protocol}//${host}/ws/analytics/`
+      const wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://perfmaster.onrender.com'
+      const wsUrl = `${wsBaseUrl}/ws/analytics/`
 
       console.info(`Connecting to WebSocket: ${wsUrl}`)
       const ws = new WebSocket(wsUrl)
